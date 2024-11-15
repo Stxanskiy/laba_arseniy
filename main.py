@@ -239,8 +239,7 @@ class AdminScreen(Screen):
         view_users_btn = Button(text='Просмотреть пользователей', on_press=partial(self.change_screen, 'view_users'))
         view_all_transactions_btn = Button(text='Просмотреть все транзакции', on_press=partial(self.change_screen, 'view_all_transactions'))
         back_btn = Button(text='Выйти', on_press=partial(self.change_screen, 'login'))
-        view_graphs_btn = Button(text='Просмотреть графики', on_press=partial(self.change_screen, 'view_graphs'))
-        layout.add_widget(view_graphs_btn)
+
 
         layout.add_widget(Label(text='Администратор'))
         layout.add_widget(view_users_btn)
@@ -382,78 +381,7 @@ class ViewUsersScreen(Screen):
     def change_screen(self, screen_name, instance):
         self.manager.current = screen_name
 
-class ViewGraphsScreen(Screen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        layout = BoxLayout(orientation='vertical')
 
-        # Поля для фильтрации по датам
-        filter_layout = BoxLayout(size_hint=(1, 0.2))
-        self.start_date = TextInput(hint_text='Дата начала (YYYY-MM-DD)', multiline=False)
-        self.end_date = TextInput(hint_text='Дата конца (YYYY-MM-DD)', multiline=False)
-        apply_filter_btn = Button(text='Применить фильтр', on_press=self.apply_filter)
-
-        filter_layout.add_widget(self.start_date)
-        filter_layout.add_widget(self.end_date)
-        filter_layout.add_widget(apply_filter_btn)
-
-        # Раздел для графика
-        self.chart_layout = BoxLayout(size_hint=(1, 0.6))
-        self.update_chart()  # Построение графика при загрузке экрана
-
-        back_btn = Button(text='Назад', size_hint=(1, 0.2), on_press=partial(self.change_screen, 'admin_screen'))
-
-        layout.add_widget(filter_layout)
-        layout.add_widget(self.chart_layout)
-        layout.add_widget(back_btn)
-        self.add_widget(layout)
-
-    def update_chart(self, start_date=None, end_date=None):
-        conn = sqlite3.connect("finance_manager.db")
-        cursor = conn.cursor()
-
-        # Базовый SQL-запрос
-        query = """
-            SELECT category, SUM(amount) 
-            FROM transactions 
-            WHERE type = 'expense' 
-        """
-        params = []
-
-        # Условия для фильтрации по датам
-        if start_date and end_date:
-            query += "AND date BETWEEN ? AND ? "
-            params.extend([start_date, end_date])
-
-        query += "GROUP BY category"
-        cursor.execute(query, params)
-        data = cursor.fetchall()
-        conn.close()
-
-        categories = [row[0] for row in data]
-        amounts = [row[1] for row in data]
-
-        plt.clf()  # Очищаем предыдущий график
-        plt.bar(categories, amounts, color='blue')
-        plt.title('Расходы по категориям')
-        plt.xlabel('Категории')
-        plt.ylabel('Сумма')
-
-        self.chart_layout.clear_widgets()
-        self.chart_layout.add_widget(FigureCanvasKivyAgg(plt.gcf()))
-
-    def apply_filter(self, instance):
-        try:
-            start_date = datetime.strptime(self.start_date.text, '%Y-%m-%d').strftime('%Y-%m-%d')
-            end_date = datetime.strptime(self.end_date.text, '%Y-%m-%d').strftime('%Y-%m-%d')
-            self.update_chart(start_date, end_date)
-        except ValueError:
-            self.start_date.text = ''
-            self.end_date.text = ''
-            self.add_widget(Label(text='Неверный формат даты!'))
-
-    def change_screen(self, screen_name, instance):
-        self.manager.current = screen_name
 
 
 
